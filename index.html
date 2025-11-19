@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo Familiar Flat V8</title>
+    <!-- Incluir la librería Tone.js para efectos de sonido -->
+    <script src="https://unpkg.com/tone@14.9.15/build/Tone.js"></script>
+    <!-- Incluir FontAwesome para iconos de sol/luna -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Font: Roboto -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* Definición de variables CSS - TEMA FLAT (Claro por defecto) */
+        :root {
+            /* Tema Flat (Claro) */
+            --base-color: #f8fafc; /* Gris extra claro (Slate 50) */
+            --panel-color: #ffffff; /* Blanco */
+            --primary-text: #1e293b; /* Gris oscuro (Slate 800) */
+            --footer-text: #64748b; /* Gris medio (Slate 500) */
+            --secondary-bg: #f1f5f9; /* Hover (Slate 100) */
+            --active-bg: #e2e8f0; /* Active (Slate 200) */
+            --dot-active-bg: #10b981; /* Verde (I-color) */
+            --dot-inactive-bg: #ef4444; /* Rojo (N-color) */
+            --light-text: #ffffff;
+            --dark-shadow: rgba(0, 0, 0, 0.05); /* Sombra muy sutil */
+            --border-color: #e2e8f0; /* Borde (Slate 200) */
+            
+            /* Colores de las letras (Vibrantes) */
+            --b-color: #0ea5e9;
+            --i-color: #10b981;
+            --n-color: #ef4444;
+            --g-color: #9333ea;
+            --o-color: #fcd34d;
+        }
+        
+        /* Definición de variables CSS - TEMA FLAT OSCURO */
+        .dark-mode {
+            --base-color: #1e293b; /* Gris oscuro (Slate 800) */
+            --panel-color: #334155; /* Gris (Slate 700) */
+            --primary-text: #f1f5f9; /* Gris claro (Slate 100) */
+            --footer-text: #94a3b8; /* Gris (Slate 400) */
+            --secondary-bg: #475569; /* Hover (Slate 600) */
+            --active-bg: #5e6c80; /* Active (Slate 550) */
+            --dark-shadow: rgba(0, 0, 0, 0.2);
+            --border-color: #475569; /* Borde (Slate 600) */
+        }
+
+        /* Estilos generales */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.2s ease, transform 0.2s ease, border-color 0.3s ease;
+        }
+        
+        body {
+            background-color: var(--base-color);
+            background-image: none; /* Sin textura */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            color: var(--primary-text);
+        }
+        
+        .container {
+            background-color: var(--panel-color);
+            border-radius: 12px; /* Bordes redondeados modernos */
+            box-shadow: 0 4px 12px var(--dark-shadow); /* Sombra sutil */
+            border: 1px solid var(--border-color);
+            width: 100%;
+            max-width: 1000px;
+            overflow: hidden;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .bingo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .bingo-board {
+            display: flex;
+            flex-direction: column; 
+            gap: 5px;
+            width: 100%;
+            max-width: 980px;
+            margin: 0 auto;
+            background-color: var(--base-color); /* Fondo diferenciado */
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: none; /* Sin sombra interna */
+        }
+
+        .bingo-row {
+            display: grid;
+            grid-template-columns: 40px repeat(15, 1fr); 
+            gap: 5px;
+            align-items: center;
+        }
+
+        .bingo-header {
+            color: var(--light-text);
+            font-family: 'Roboto', sans-serif;
+            font-weight: 700;
+            padding: 5px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 1.5rem;
+            text-shadow: none;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+        }
+        
+        .bingo-cell {
+            background-color: var(--base-color);
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700; /* Texto más grueso */
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none; /* Sin sombra interna */
+            transition: all 0.3s ease;
+            color: var(--footer-text);
+        }
+        
+        .bingo-cell.called {
+            color: var(--light-text);
+            font-weight: 700;
+            text-shadow: none;
+            box-shadow: none;
+            transform: none; /* Sin escala */
+        }
+        
+        @keyframes pulse-effect {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        .bingo-cell.called-pulse {
+            animation: pulse-effect 0.5s ease-out;
+        }
+        
+        .reel-flashing {
+            transition: opacity 0.05s ease, transform 0.05s ease; 
+        }
+        .current-number-display.reel-flashing,
+        .current-number-letter.reel-flashing {
+            opacity: 0.2;
+            transform: translateY(2px) scale(0.98);
+        }
+        
+        /* Colores para Cabeceras y Celdas */
+        .b-row .bingo-header { background-color: var(--b-color); }
+        .i-row .bingo-header { background-color: var(--i-color); }
+        .n-row .bingo-header { background-color: var(--n-color); }
+        .g-row .bingo-header { background-color: var(--g-color); }
+        .o-row .bingo-header { background-color: var(--o-color); }
+
+        .b-row .bingo-cell.called { background-color: var(--b-color); }
+        .i-row .bingo-cell.called { background-color: var(--i-color); }
+        .n-row .bingo-cell.called { background-color: var(--n-color); }
+        .g-row .bingo-cell.called { background-color: var(--g-color); }
+        .o-row .bingo-cell.called { background-color: var(--o-color); }
+        
+        
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 0; /* Sin padding extra */
+            border-radius: 0;
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        
+        /* Estilos base de botones FLAT */
+        button {
+            color: var(--light-text);
+            border: none;
+            border-bottom: none; /* Sin borde 3D */
+            padding: 14px 20px; /* Botones más altos */
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease-out; /* Transición más rápida */
+            width: 100%;
+            font-weight: 700;
+            background-image: none;
+            background-color: var(--g-color); /* Color púrpura principal */
+            box-shadow: none;
+            text-shadow: none;
+            transform: none; /* Sin translateY */
+        }
+        
+        button:hover {
+            transform: none;
+            box-shadow: none;
+            opacity: 0.85; /* Simple hover */
+        }
+        
+        button:active {
+            transform: scale(0.98); /* Pop al hacer clic */
+            box-shadow: none;
+            border-bottom: none;
+            opacity: 0.7;
+        }
+
+        /* Botones deshabilitados (planos) */
+        button:disabled {
+            color: var(--footer-text);
+            border: none;
+            background-image: none;
+            background-color: var(--active-bg);
+            opacity: 0.7;
+            cursor: not-allowed;
+            box-shadow: none;
+            text-shadow: none;
+            transform: none;
+        }
+        
+        /* Secciones de Números */
+        .number-sections-container {
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            gap: 20px;
+            width: 100%;
+            padding: 0 10px;
+        }
+
+        .current-number, .called-numbers {
+            background-color: var(--base-color); /* Fondo diferenciado */
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            box-shadow: none; /* Sin sombra interna */
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .current-number-display-container {
+            display: flex;
+            align-items: baseline; /* Alinear base de letra y número */
+            justify-content: center;
+            gap: 15px;
+            transition: transform 0.1s ease-out;
+            margin-top: 10px; 
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        
+        .current-number-letter {
+            /* Estilo de TEXTO plano */
+            width: auto;
+            height: auto;
+            border-radius: 0;
+            display: block;
+            font-size: 7rem;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 900; /* Extra grueso */
+            text-shadow: none;
+            box-shadow: none;
+            border: none;
+            background-image: none;
+            flex-shrink: 0;
+        }
+        
+        .current-number-display {
+            font-family: 'Roboto', sans-serif;
+            font-size: 7rem;
+            font-weight: 900; /* Extra grueso */
+            line-height: 1;
+            color: var(--primary-text);
+            text-shadow: none;
+        }
+
+        /* Colores de la LETRA (solo color de texto) */
+        .b-letter { background-color: transparent; color: var(--b-color); }
+        .i-letter { background-color: transparent; color: var(--i-color); }
+        .n-letter { background-color: transparent; color: var(--n-color); }
+        .g-letter { background-color: transparent; color: var(--g-color); }
+        .o-letter { background-color: transparent; color: var(--o-color); }
+        
+        .number-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px; /* Menos espacio */
+            overflow-y: auto;
+            padding: 5px;
+            flex-grow: 1;
+            flex-direction: row;
+        }
+
+        .number-item {
+            /* Estilo FICHA PLANA (Cuadrado redondeado) */
+            color: var(--light-text);
+            width: 35px;
+            height: 35px;
+            border-radius: 8px; /* Cuadrado redondeado */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            box-shadow: none;
+            border: none;
+            text-shadow: none;
+            transition: all 0.3s ease;
+            background-image: none;
+        }
+
+        /* Colores de fondo de las FICHAS */
+        .b-item { background-color: var(--b-color); }
+        .i-item { background-color: var(--i-color); }
+        .n-item { background-color: var(--n-color); }
+        .g-item { background-color: var(--g-color); }
+        .o-item { background-color: var(--o-color); }
+        /* ************************************** */
+        
+        .auto-controls-section {
+            background-color: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .auto-controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+        }
+        
+        .interval-selector {
+            position: relative;
+            display: inline-block;
+            width: 100%; 
+        }
+        
+        /* Botón de selector (diferente a los de acción) */
+        .interval-selector-btn {
+            background-color: var(--panel-color);
+            color: var(--primary-text);
+            border: 1px solid var(--border-color);
+            box-shadow: none;
+            transform: none;
+        }
+        
+        .interval-selector-btn:hover {
+            background-color: var(--secondary-bg);
+            transform: none;
+            box-shadow: none;
+            opacity: 1;
+        }
+        
+        .interval-selector-btn.active {
+            transform: none;
+            box-shadow: none;
+            background-color: var(--active-bg);
+        }
+        
+        .interval-selector-btn::after {
+            content: "▼";
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+            color: var(--primary-text);
+        }
+        
+        .interval-selector-btn.open::after {
+            transform: rotate(180deg);
+        }
+        
+        .interval-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--panel-color);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 5px 15px var(--dark-shadow); /* Sombra sutil para el menú */
+            z-index: 100;
+            display: none;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .interval-dropdown.open {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .interval-option {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--primary-text);
+        }
+        
+        .interval-option:hover {
+            background-color: var(--secondary-bg); 
+        }
+        
+        .interval-option:last-child {
+            border-bottom: none;
+        }
+        
+        .interval-option.active {
+            background-color: var(--active-bg);
+            color: var(--primary-text);
+            font-weight: bold;
+        }
+
+        /* Indicador de estado de generación automática */
+        .auto-status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            width: 100%;
+            border: none;
+            box-shadow: none;
+            color: var(--primary-text); 
+            background-color: var(--panel-color);
+        }
+        
+        .auto-status-indicator.active {
+            background-color: var(--dot-active-bg); /* Verde */
+            color: var(--light-text);
+            border-color: transparent;
+            text-shadow: none;
+            box-shadow: none;
+        }
+        
+        .auto-status-indicator.inactive {
+            background-color: var(--dot-inactive-bg); /* Rojo */
+            color: var(--light-text);
+            border-color: transparent;
+            text-shadow: none;
+            box-shadow: none;
+        }
+        
+        /* Contador de números disponibles en la parte inferior */
+        .numbers-counter {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: var(--panel-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: none;
+        }
+        
+        .counter-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-text);
+        }
+        
+        .counter-label {
+            color: var(--primary-text);
+        }
+        
+        /* Barra de progreso */
+        .progress-bar {
+            height: 8px; /* Más gruesa */
+            background-color: var(--active-bg); 
+            border: none;
+            border-radius: 8px;
+            margin-top: 5px;
+            overflow: hidden;
+            width: 100%;
+            box-shadow: none;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: var(--g-color); /* Púrpura */
+            transition: width 0.5s ease;
+            box-shadow: none;
+            border-radius: 8px;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 20px;
+            padding: 10px;
+            color: var(--footer-text);
+            font-size: 0.8rem;
+            text-shadow: none;
+            text-align: center;
+            width: 100%;
+        }
+        
+        /* Estilo para el botón flotante de Dark Mode */
+        #darkModeToggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            z-index: 1000;
+            /* Estilos de botón flat */
+            color: var(--primary-text);
+            border: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            background-image: none;
+            background-color: var(--panel-color);
+            box-shadow: 0 2px 8px var(--dark-shadow);
+            text-shadow: none;
+            transform: none;
+        }
+        
+        #darkModeToggle:hover {
+            transform: none;
+            background-color: var(--secondary-bg);
+            box-shadow: 0 4px 10px var(--dark-shadow);
+            opacity: 1;
+        }
+
+        #darkModeToggle:active {
+            transform: scale(0.95);
+            box-shadow: none;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        
+        /* --- Estilos para el mensaje de Bingo --- */
+        .message-box {
+            display: none; 
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background-color: var(--n-color);
+            color: white;
+            border-radius: 12px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            z-index: 2000;
+            border: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            text-shadow: none;
+            opacity: 0;
+        }
+        
+        .message-box.show {
+            display: block;
+            animation: fadeInOut 3s ease-in-out;
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+            10% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            90% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+        }
+        /* --- FIN CORRECCIÓN --- */
+
+
+        /* Media Queries - Mantenemos la responsividad */
+        @media (max-width: 768px) {
+            .bingo-row {
+                grid-template-columns: 35px repeat(15, 1fr);
+                gap: 5px;
+            }
+            .current-number-display, 
+            .current-number-letter {
+                font-size: 5rem; /* Reducir ambos al mismo tamaño */
+            }
+
+            .number-sections-container {
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+            }
+            .current-number, .called-numbers {
+                width: 100%;
+            }
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+            .auto-controls-grid {
+                grid-template-columns: 1fr;
+            }
+            .numbers-counter {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .counter-item {
+                width: 100%;
+            }
+        }
+        
+        @media (max-width: 500px) {
+            .bingo-row {
+                grid-template-columns: 30px repeat(15, 1fr);
+                gap: 3px;
+            }
+            .bingo-cell {
+                font-size: 0.8rem;
+                padding: 8px 5px;
+                border-radius: 4px;
+            }
+            #darkModeToggle {
+                bottom: 10px;
+                right: 10px;
+                width: 45px;
+                height: 45px;
+                font-size: 1.3rem;
+            }
+            .number-item {
+                width: 30px;
+                height: 30px;
+                border-radius: 6px;
+            }
+            .current-number-display, 
+            .current-number-letter {
+                font-size: 4rem;
+            }
+        }
+    </style>
+</head>
+<body class="light-mode"> 
+    <div class="container">
+        
+        <div class="bingo-container">
+            <div class="bingo-board" id="bingoBoard">
+                <!-- Se generarán las filas aquí con JavaScript -->
+            </div>
+            
+            <div class="number-sections-container">
+                <div class="current-number">
+                    <div class="current-number-display-container" id="currentNumberDisplayContainer">
+                        <div class="current-number-letter" id="currentLetter"></div>
+                        <div class="current-number-display" id="currentNumber">-</div>
+                    </div>
+                </div>
+                
+                <div class="called-numbers">
+                    <div class="number-list" id="calledNumbersList"></div>
+                </div>
+            </div>
+
+            <div class="controls-grid">
+                <div class="controls-section">
+                    <button id="generateBtn">Generar Número</button>
+                    <button id="repeatBtn">Repetir Número</button>
+                    <button id="resetBtn">Reiniciar Juego</button>
+                </div>
+                
+                <div class="controls-section">
+                    <div class="interval-selector">
+                        <button class="interval-selector-btn" id="intervalSelectorBtn">
+                            <span id="intervalText">Seleccionar intervalo</span>
+                        </button>
+                        <div class="interval-dropdown" id="intervalDropdown">
+                            <div class="interval-option" data-interval="10">10 segundos</div>
+                            <div class="interval-option" data-interval="15">15 segundos</div>
+                            <div class="interval-option" data-interval="20">20 segundos</div>
+                            <div class="interval-option" data-interval="25">25 segundos</div>
+                            <div class="interval-option" data-interval="30">30 segundos</div>
+                        </div>
+                    </div>
+                    
+                    <div class="auto-controls-grid">
+                        <button id="pauseBtn">Pausar</button>
+                        <button id="resumeBtn">Continuar</button>
+                    </div>
+                    
+                    <div class="auto-status-indicator inactive" id="autoStatusIndicator">
+                        <div class="status-dot"></div>
+                        <span id="autoStatusText">Generación automática desactivada</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="numbers-counter">
+                <div class="counter-item">
+                    <span class="counter-label">Números disponibles</span>
+                    <span class="counter-value" id="availableCount">75</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 100%;"></div>
+                    </div>
+                </div>
+                <div class="counter-item">
+                    <span class="counter-label">Números sorteados</span>
+                    <span class="counter-value" id="calledCount">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contenedor para el mensaje de Bingo (Estilos ahora en CSS) -->
+    <div class="message-box" id="bingoMessage"></div>
+
+    <!-- Botón flotante para alternar modo oscuro/claro -->
+    <button id="darkModeToggle" aria-label="Cambiar modo oscuro/claro">
+        <i class="fas fa-sun" id="darkModeIcon"></i>
+    </button>
+
+    <!-- Pie de página de Derechos Reservados -->
+    <footer>
+        &copy; 2025. by Julian Sierra - Todos los derechos reservados.
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const generateBtn = document.getElementById('generateBtn');
+            const repeatBtn = document.getElementById('repeatBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const calledNumbersList = document.getElementById('calledNumbersList');
+            const currentNumberDisplay = document.getElementById('currentNumber');
+            const currentLetterDisplay = document.getElementById('currentLetter');
+            const bingoBoard = document.getElementById('bingoBoard');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
+            const bingoMessage = document.getElementById('bingoMessage');
+            
+            const autoStatusIndicator = document.getElementById('autoStatusIndicator');
+            const autoStatusText = document.getElementById('autoStatusText');
+            const availableCount = document.getElementById('availableCount');
+            const calledCount = document.getElementById('calledCount');
+            const progressFill = document.getElementById('progressFill');
+            
+            const intervalSelectorBtn = document.getElementById('intervalSelectorBtn');
+            const intervalDropdown = document.getElementById('intervalDropdown');
+            const intervalText = document.getElementById('intervalText');
+            const intervalOptions = document.querySelectorAll('.interval-option');
+            
+            // Elementos del modo oscuro
+            const body = document.body;
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const darkModeIcon = document.getElementById('darkModeIcon');
+            const themeKey = 'bingoThemeMode';
+
+
+            let availableNumbers = [];
+            let calledNumbers = [];
+            let autoGenerateInterval = null;
+            let reelInterval = null; // Nuevo intervalo para el efecto carrete
+            let currentInterval = 0;
+            let isGenerating = false; 
+            
+            const REEL_DURATION_MS = 1500; 
+
+            const synthSpeech = window.speechSynthesis;
+            const synth = new Tone.Synth().toDestination();
+            const bingoSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+
+            // --- Lógica del Modo Oscuro/Claro ---
+            function loadTheme() {
+                const savedTheme = localStorage.getItem(themeKey);
+                if (savedTheme === 'dark') {
+                    setDarkMode(true);
+                } else {
+                    setDarkMode(false);
+                }
+            }
+
+            function setDarkMode(isDark) {
+                if (isDark) {
+                    body.classList.add('dark-mode');
+                    body.classList.remove('light-mode');
+                    darkModeIcon.classList.remove('fa-sun');
+                    darkModeIcon.classList.add('fa-moon');
+                    localStorage.setItem(themeKey, 'dark');
+                } else {
+                    body.classList.remove('dark-mode');
+                    body.classList.add('light-mode');
+                    darkModeIcon.classList.remove('fa-moon');
+                    darkModeIcon.classList.add('fa-sun');
+                    localStorage.setItem(themeKey, 'light');
+                }
+            }
+
+            darkModeToggle.addEventListener('click', () => {
+                const isDark = body.classList.contains('dark-mode');
+                setDarkMode(!isDark);
+            });
+            // ------------------------------------
+
+
+            function speakNumber(number, letter) {
+                if (!synthSpeech) {
+                    console.log("Speech Synthesis API no está soportada en este navegador.");
+                    return;
+                }
+                
+                const textToSpeak = `${letter} ${number}, ${letter}, el número, ${number}`;
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                
+                utterance.lang = 'es-US'; 
+                utterance.rate = 1;
+                
+                synthSpeech.cancel();
+                synthSpeech.speak(utterance);
+            }
+
+            // Actualiza el estado (habilitado/deshabilitado) de los botones de control
+            function updateButtonStates() {
+                repeatBtn.disabled = calledNumbers.length === 0;
+                pauseBtn.disabled = !autoGenerateInterval;
+                resumeBtn.disabled = !!autoGenerateInterval || currentInterval === 0;
+            }
+
+            function updateNumbersCounter() {
+                const available = availableNumbers.length;
+                const called = calledNumbers.length;
+                const total = 75;
+                
+                availableCount.textContent = available;
+                calledCount.textContent = called;
+                
+                const progressPercentage = (called / total) * 100;
+                progressFill.style.width = `${progressPercentage}%`;
+            }
+
+            function updateAutoStatusIndicator(isActive, interval = null) {
+                if (isActive && interval) {
+                    autoStatusIndicator.classList.remove('inactive');
+                    autoStatusIndicator.classList.add('active');
+                    autoStatusText.textContent = `Generando cada ${interval} segundos`;
+                } else {
+                    autoStatusIndicator.classList.remove('active');
+                    autoStatusIndicator.classList.add('inactive');
+                    autoStatusText.textContent = 'Generación automática desactivada';
+                }
+            }
+
+            function renderBoard() {
+                bingoBoard.innerHTML = '';
+                const letters = ['B', 'I', 'N', 'G', 'O'];
+                const ranges = [[1, 15], [16, 30], [31, 45], [46, 60], [61, 75]];
+
+                letters.forEach((letter, index) => {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'bingo-row ' + letter.toLowerCase() + '-row';
+
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = 'bingo-header';
+                    headerDiv.textContent = letter;
+                    rowDiv.appendChild(headerDiv);
+
+                    const [start, end] = ranges[index];
+                    for (let i = start; i <= end; i++) {
+                        const cellDiv = document.createElement('div');
+                        cellDiv.className = 'bingo-cell ' + letter.toLowerCase() + '-col';
+                        cellDiv.id = letter.toLowerCase() + '-' + i;
+                        cellDiv.textContent = i;
+                        rowDiv.appendChild(cellDiv);
+                    }
+                    bingoBoard.appendChild(rowDiv);
+                });
+            }
+
+            function initializeNumbers() {
+                availableNumbers = Array.from({length: 75}, (_, i) => i + 1);
+                calledNumbers = [];
+                updateCalledNumbersList();
+                resetBoard();
+                currentNumberDisplay.textContent = '-';
+                currentLetterDisplay.textContent = '';
+                currentLetterDisplay.className = 'current-number-letter';
+                stopAutoGenerate();
+                stopReelEffect();
+                updateNumbersCounter();
+                updateAutoStatusIndicator(false);
+                
+                intervalText.textContent = 'Seleccionar intervalo';
+                intervalSelectorBtn.classList.remove('active');
+                intervalOptions.forEach(option => option.classList.remove('active'));
+                
+                isGenerating = false;
+                generateBtn.disabled = false;
+                resetBtn.disabled = false;
+                intervalSelectorBtn.disabled = false;
+                updateButtonStates();
+
+                if (synthSpeech) {
+                    synthSpeech.cancel();
+                }
+            }
+            
+            function resetBoard() {
+                const cells = document.querySelectorAll('.bingo-cell');
+                cells.forEach(cell => {
+                    cell.classList.remove('called');
+                    cell.classList.remove('called-pulse');
+                    cell.style.cssText = ''; 
+                });
+            }
+            
+            function updateCalledNumbersList() {
+                calledNumbersList.innerHTML = '';
+                const reversedCalledNumbers = [...calledNumbers].reverse();
+                reversedCalledNumbers.forEach(number => {
+                    const numberItem = document.createElement('div');
+                    const letter = getColumnLetter(number);
+                    
+                    numberItem.className = 'number-item ' + letter + '-item';
+                    numberItem.textContent = number;
+                    calledNumbersList.appendChild(numberItem);
+                });
+            }
+            
+            function getNumberLetter(number) {
+                if (number <= 15) return 'b';
+                if (number <= 30) return 'i';
+                if (number <= 45) return 'n';
+                if (number <= 60) return 'g';
+                return 'o';
+            }
+
+            function startReelEffect() {
+                if (availableNumbers.length === 0) return;
+
+                const allNumbers = Array.from({length: 75}, (_, i) => i + 1); 
+
+                if (reelInterval) {
+                    clearInterval(reelInterval);
+                }
+                
+                currentNumberDisplay.classList.add('reel-flashing');
+                currentLetterDisplay.classList.add('reel-flashing');
+
+                reelInterval = setInterval(() => {
+                    const randomIndex = Math.floor(Math.random() * allNumbers.length);
+                    const flashingNumber = allNumbers[randomIndex];
+                    const letter = getNumberLetter(flashingNumber);
+                    const upperLetter = letter.toUpperCase();
+
+                    currentNumberDisplay.textContent = flashingNumber;
+                    currentLetterDisplay.textContent = upperLetter; 
+                    currentLetterDisplay.className = `current-number-letter ${letter}-letter`;
+
+                    synth.triggerAttackRelease("C2", "64n");
+
+                }, 50);
+            }
+
+            function stopReelEffect() {
+                if (reelInterval) {
+                    clearInterval(reelInterval);
+                    reelInterval = null;
+                }
+                currentNumberDisplay.classList.remove('reel-flashing');
+                currentLetterDisplay.classList.remove('reel-flashing');
+            }
+
+            function _updateFinalNumber(number) {
+                const letter = getNumberLetter(number);
+                const upperLetter = letter.toUpperCase();
+
+                currentNumberDisplay.textContent = number;
+                currentLetterDisplay.textContent = upperLetter;
+                currentLetterDisplay.className = `current-number-letter ${letter}-letter`;
+
+                updateBoard(number);
+                updateCalledNumbersList();
+                updateNumbersCounter();
+                
+                bingoSynth.triggerAttackRelease(["C4", "G4"], "8n"); 
+                speakNumber(number, upperLetter);
+            }
+            
+            function generateNumber() {
+                if (isGenerating) return;
+
+                if (availableNumbers.length === 0) {
+                    stopAutoGenerate();
+                    showBingoMessage('¡Todos los números han sido sorteados!');
+                    return;
+                }
+                
+                isGenerating = true;
+                generateBtn.disabled = true;
+                resetBtn.disabled = true; 
+                repeatBtn.disabled = true; 
+                pauseBtn.disabled = true; 
+                resumeBtn.disabled = true; 
+                intervalSelectorBtn.disabled = true; 
+                
+                const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+                const finalNumber = availableNumbers[randomIndex];
+                
+                startReelEffect();
+                Tone.start();
+
+                setTimeout(() => {
+                    stopReelEffect();
+                    
+                    availableNumbers.splice(randomIndex, 1);
+                    calledNumbers.push(finalNumber);
+                    
+                    _updateFinalNumber(finalNumber);
+                    
+                    isGenerating = false;
+                    generateBtn.disabled = false;
+                    resetBtn.disabled = false;
+                    intervalSelectorBtn.disabled = false;
+                    updateButtonStates();
+
+                }, REEL_DURATION_MS);
+            }
+            
+            function updateBoard(number) {
+                const letter = getNumberLetter(number);
+                const cell = document.getElementById(letter + '-' + number);
+                if (cell) {
+                    cell.classList.add('called');
+                    cell.classList.remove('called-pulse');
+                    void cell.offsetWidth; // Force reflow
+                    cell.classList.add('called-pulse');
+
+                    setTimeout(() => {
+                        cell.classList.remove('called-pulse');
+                    }, 500);
+                }
+            }
+            
+            function getColumnLetter(number) {
+                return getNumberLetter(number);
+            }
+
+            function startAutoGenerate(interval) {
+                stopAutoGenerate();
+                currentInterval = interval;
+                autoGenerateInterval = setInterval(generateNumber, REEL_DURATION_MS + (interval * 1000));
+                updateAutoStatusIndicator(true, interval);
+                Tone.start();
+                updateButtonStates();
+            }
+
+            function stopAutoGenerate() {
+                if (autoGenerateInterval) {
+                    clearInterval(autoGenerateInterval);
+                    autoGenerateInterval = null;
+                }
+                updateAutoStatusIndicator(false);
+                if (synthSpeech) {
+                    synthSpeech.cancel();
+                }
+                updateButtonStates();
+            }
+
+            function showBingoMessage(message) {
+                bingoMessage.textContent = message;
+                bingoMessage.classList.add('show');
+
+                setTimeout(() => {
+                    bingoMessage.classList.remove('show');
+                }, 3000); 
+            }
+            
+            generateBtn.addEventListener('click', () => {
+                Tone.start();
+                generateNumber();
+            });
+
+            repeatBtn.addEventListener('click', () => {
+                if (calledNumbers.length > 0) {
+                    const lastNumber = calledNumbers[calledNumbers.length - 1];
+                    const lastLetter = getColumnLetter(lastNumber).toUpperCase();
+                    speakNumber(lastNumber, lastLetter);
+                } else {
+                    showBingoMessage('No hay números cantados para repetir.', 3000); 
+                    synth.triggerAttackRelease("C3", "16n");
+                }
+            });
+
+            resetBtn.addEventListener('click', () => {
+                if (isGenerating) return;
+                initializeNumbers();
+            });
+
+            intervalSelectorBtn.addEventListener('click', function() {
+                if (intervalSelectorBtn.disabled) return;
+                intervalDropdown.classList.toggle('open');
+                intervalSelectorBtn.classList.toggle('open');
+            });
+
+            intervalOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    if (isGenerating) return; 
+
+                    const interval = parseInt(this.dataset.interval);
+                    
+                    intervalText.textContent = `${interval} segundos`;
+                    intervalSelectorBtn.classList.add('active');
+                    
+                    intervalOptions.forEach(opt => opt.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    intervalDropdown.classList.remove('open');
+                    intervalSelectorBtn.classList.remove('open');
+                    
+                    startAutoGenerate(interval);
+                });
+            });
+
+            document.addEventListener('click', function(event) {
+                // Ignorar clics en el toggle de modo oscuro
+                if (event.target === darkModeToggle || darkModeToggle.contains(event.target)) {
+                    return;
+                }
+                // Ocultar el dropdown si se hace clic fuera
+                if (!intervalSelectorBtn.contains(event.target) && !intervalDropdown.contains(event.target)) {
+                    intervalDropdown.classList.remove('open');
+                    intervalSelectorBtn.classList.remove('open');
+                }
+            });
+
+            pauseBtn.addEventListener('click', () => {
+                if (pauseBtn.disabled) return;
+                stopAutoGenerate();
+            });
+
+            resumeBtn.addEventListener('click', () => {
+                if (resumeBtn.disabled) return; 
+                Tone.start();
+                if (!autoGenerateInterval && currentInterval > 0) {
+                    startAutoGenerate(currentInterval);
+                }
+            });
+            
+            // Inicializar
+            loadTheme(); // Cargar el tema al inicio
+            renderBoard();
+            initializeNumbers();
+        });
+    </script>
+</body>
+</html>
